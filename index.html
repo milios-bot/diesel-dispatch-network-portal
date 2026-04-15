@@ -6,6 +6,7 @@
 <title>Diesel Dispatch Network — Client Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --primary:#F97316;--primary-light:#FB923C;--primary-glow:rgba(249,115,22,0.25);--primary-dim:rgba(249,115,22,0.08);
@@ -352,6 +353,89 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
 </div>
 
 <script>
+const SUPABASE_URL = 'https://beytapbobiairrqcauev.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_EfXLMgeTo0vl3CPnQR1Lbg_W3QdQm8W';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let liveJobsMap = {};
+let liveJobsLoaded = false;
+
+async function loadSupabaseJobs() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase jobs load failed:', error);
+      liveJobsLoaded = false;
+      return [];
+    }
+
+    const jobs = Array.isArray(data) ? data : [];
+    liveJobsMap = {};
+    for (const row of jobs) {
+      const normalized = normalizeSupabaseJob(row);
+      liveJobsMap[normalized.id] = normalized;
+    }
+    liveJobsLoaded = jobs.length > 0;
+    updateFooterSyncStatus(liveJobsLoaded ? `Live sync · ${jobs.length} job${jobs.length === 1 ? '' : 's'}` : 'Live sync · 0 jobs');
+    return jobs;
+  } catch (err) {
+    console.error('Unexpected Supabase load error:', err);
+    liveJobsLoaded = false;
+    return [];
+  }
+}
+
+function normalizeSupabaseJob(row) {
+  return {
+    id: row.job_id || row.id || '—',
+    date: row.job_date || formatJobDate(row.created_at),
+    time: row.job_time || formatJobTime(row.created_at),
+    callerName: row.caller_name || '—',
+    callbackNumber: row.callback_number || '—',
+    company: row.company || '—',
+    fleetName: row.fleet_name || '—',
+    truckType: row.truck_type || '—',
+    truckNumber: row.truck_number || '—',
+    issue: row.issue || '—',
+    issueDetail: row.issue_detail || row.issue || '—',
+    urgency: row.urgency || '—',
+    driveable: typeof row.driveable === 'boolean' ? row.driveable : null,
+    jobLocation: row.job_location || row.location || '—',
+    onsiteContact: row.onsite_contact || row.caller_name || '—',
+    tech: row.tech_name || '—',
+    response: row.response || '—',
+    distance: row.distance || '—',
+    revenue: row.revenue || '—',
+    status: row.status || 'Pending',
+    notes: row.notes || '',
+  };
+}
+
+function formatJobDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatJobTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function getActiveJobsMap() {
+  if (liveJobsLoaded && Object.keys(liveJobsMap).length) return liveJobsMap;
+  return currentClient?.jobs || {};
+}
+
+function updateFooterSyncStatus(status) {
+  const el = document.getElementById('footerRefresh');
+  if (el) el.textContent = status;
+}
+
 /* ================================================================
    CLIENT + TECH DATABASE
    ================================================================
@@ -593,7 +677,7 @@ function doLogout(){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
 }
 
-function showDashboard(){
+async function showDashboard(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('dashboard').classList.add('active');
   const isOwner=!currentTech, c=currentClient;
@@ -602,10 +686,11 @@ function showDashboard(){
   const badge=document.getElementById('headerRoleBadge');
   if(isOwner){badge.textContent='OWNER';badge.className='header-role-badge badge-owner';}
   else{badge.textContent='TECHNICIAN';badge.className='header-role-badge badge-tech-role';}
-  document.getElementById('footerRefresh').textContent=`Last update: ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+  updateFooterSyncStatus(liveJobsLoaded ? `Live sync · ${Object.keys(liveJobsMap).length} job${Object.keys(liveJobsMap).length === 1 ? '' : 's'}` : `Demo data · ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`);
   const nav=document.getElementById('navTabs');
   if(isOwner){
     nav.innerHTML=`<button class="nav-tab active" data-tab="overview">Overview</button><button class="nav-tab" data-tab="jobs">Jobs</button><button class="nav-tab" data-tab="techs">Technicians</button><button class="nav-tab" data-tab="insights">Insights</button>`;
+    await loadSupabaseJobs();
     renderOwner();
   } else {
     nav.innerHTML=`<button class="nav-tab active" data-tab="mystatus">My Status</button><button class="nav-tab" data-tab="myjobs">My Jobs</button><button class="nav-tab" data-tab="techinsights">Insights</button>`;
@@ -627,7 +712,7 @@ function switchTab(t){
    JOB DETAIL MODAL
    ================================================================ */
 function openJobModal(jobId){
-  const job = currentClient.jobs[jobId];
+  const job = getActiveJobsMap()[jobId];
   if(!job) return;
   const isOwner = !currentTech;
 
@@ -715,7 +800,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
    ================================================================ */
 function renderOwner(){
   const c=currentClient,s=c.stats;
-  const jobList = Object.values(c.jobs);
+  const jobList = Object.values(getActiveJobsMap());
 
   const primary=[
     {label:'Calls Answered',...s.callsAnswered},{label:'Leads Secured',...s.leadsSecured},
@@ -762,7 +847,8 @@ function renderTech(){
   document.getElementById('dutyToggle').checked=t.onDuty;
   updateDutyLabel(t.onDuty);
 
-  const completed = t.jobs.filter(jid=>currentClient.jobs[jid]&&currentClient.jobs[jid].status==='Completed').length;
+  const activeJobs = getActiveJobsMap();
+  const completed = t.jobs.filter(jid=>activeJobs[jid]&&activeJobs[jid].status==='Completed').length;
   document.getElementById('techMiniStats').innerHTML=`
     <div class="tech-mini-stat"><div class="tech-mini-val">${t.jobsThisMonth}</div><div class="tech-mini-label">Jobs This Month</div></div>
     <div class="tech-mini-stat"><div class="tech-mini-val">${t.avgResponse}</div><div class="tech-mini-label">Avg Response</div></div>
@@ -773,7 +859,7 @@ function renderTech(){
   document.getElementById('shiftGrid').innerHTML=days.map(d=>{const time=t.shift[d]||'Off';return `<div class="shift-day ${time==='Off'?'off':''}"><div class="shift-day-name">${d}</div><div class="shift-day-time">${time}</div></div>`;}).join('');
 
   // Tech jobs — pull full detail from shared jobs object
-  const techJobs = t.jobs.map(jid=>currentClient.jobs[jid]).filter(Boolean);
+  const techJobs = t.jobs.map(jid=>activeJobs[jid]).filter(Boolean);
   document.getElementById('techJobsBody').innerHTML=techJobs.map(j=>`<tr class="clickable-row" onclick="openJobModal('${j.id}')"><td class="td-id">${j.id}</td><td class="td-dim">${j.date}</td><td class="td-bold">${j.company}</td><td class="td-dim">${j.issue}</td><td>${j.response}</td><td>${badgeHTML(j.status)}</td></tr>`).join('');
 
   document.getElementById('techInsightsList').innerHTML=t.insights.map(i=>`<div class="insight-card"><span class="insight-icon">${i.icon}</span><span class="insight-text">${i.text}</span></div>`).join('');
