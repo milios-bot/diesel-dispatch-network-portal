@@ -1,3 +1,4 @@
+@@ -1,834 +1,920 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -501,6 +502,23 @@ const CLIENTS = {
         jobs:["JOB-0341"],
         insights:[{icon:"🛞",text:"Brake jobs are trending up — 3 more this month than last. Good specialty to have."}],
       },
+      {
+        loginId:"chris.r",
+        password:"dispatch2026",
+        name:"Chris Ramirez",
+        specialty:"Mobile Diesel Repair",
+        jobsThisMonth:12,
+        avgResponse:"4.6 min",
+        acceptRate:"91%",
+        onDuty:true,
+        shift:{Mon:"6a–6p",Tue:"6a–6p",Wed:"6a–6p",Thu:"6a–6p",Fri:"6a–6p",Sat:"8a–2p",Sun:"Off"},
+        weeklyJobs:[3,3,3,3],
+        jobs:["JOB-0345","JOB-0343"],
+        insights:[
+          {icon:"🔧",text:"Stay responsive during peak dispatch hours."},
+          {icon:"📈",text:"Strong acceptance rate — keep it consistent."}
+        ],
+      },
     ],
     techUtilData:{"Carlos M.":91,"Danny R.":84,"James T.":76,"Marcus W.":68},
 
@@ -686,6 +704,7 @@ async function showDashboard(){
   const badge=document.getElementById('headerRoleBadge');
   if(isOwner){badge.textContent='OWNER';badge.className='header-role-badge badge-owner';}
   else{badge.textContent='TECHNICIAN';badge.className='header-role-badge badge-tech-role';}
+  document.getElementById('footerRefresh').textContent=`Last update: ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
   updateFooterSyncStatus(liveJobsLoaded ? `Live sync · ${Object.keys(liveJobsMap).length} job${Object.keys(liveJobsMap).length === 1 ? '' : 's'}` : `Demo data · ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`);
   const nav=document.getElementById('navTabs');
   if(isOwner){
