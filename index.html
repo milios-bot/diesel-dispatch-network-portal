@@ -262,6 +262,18 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
 .stagger-1{animation:slideUp .4s ease .05s both}.stagger-2{animation:slideUp .4s ease .1s both}
 .stagger-3{animation:slideUp .4s ease .15s both}.stagger-4{animation:slideUp .4s ease .2s both}
 .stagger-5{animation:slideUp .4s ease .25s both}.stagger-6{animation:slideUp .4s ease .3s both}
+
+/* REVENUE GOAL BAR */
+.goal-bar-wrap{margin-top:8px}
+.goal-bar-track{height:12px;background:var(--bg-base);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.goal-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--primary),var(--green));transition:width .8s ease}
+.goal-bar-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)}
+.goal-bar-pct{font-family:var(--font-heading);font-size:20px;font-weight:600;color:var(--primary)}
+/* REVIEW STATS */
+.review-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.review-stat{background:var(--bg-base);border-radius:var(--border-radius-md,8px);padding:14px;text-align:center;border:1px solid var(--border)}
+.review-stat-val{font-family:var(--font-heading);font-size:28px;font-weight:600;color:var(--primary)}
+.review-stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
 </style>
 </head>
 <body>
@@ -353,6 +365,21 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
   </div>
 </div>
 
+<!-- AI CHAT -->
+<div id="aiChatPanel" style="display:none;position:fixed;bottom:24px;right:24px;width:360px;max-height:520px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:16px;z-index:500;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.5)">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--primary),#EA580C);border-radius:16px 16px 0 0">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff">🤖 Dispatch AI Assistant</div>
+    <button onclick="toggleAIChat()" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">×</button>
+  </div>
+  <div id="aiMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:340px;min-height:200px">
+    <div style="background:var(--bg-elevated);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-secondary);line-height:1.5">Hey! I'm your Dispatch AI. Ask me anything about your jobs, techs, performance, or how to improve your dispatch operation.</div>
+  </div>
+  <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px">
+    <input id="aiInput" placeholder="Ask me anything..." style="flex:1;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-family:var(--font-body);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')sendAIMessage()">
+    <button onclick="sendAIMessage()" style="background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600">Send</button>
+  </div>
+</div>
+
 <!-- DASHBOARD -->
 <div id="dashboard" class="dashboard">
   <div class="header diamond-bg">
@@ -365,8 +392,10 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
         </div>
       </div>
       <div class="header-right">
+        <div id="liveClock" style="font-size:12px;color:var(--text-muted);font-family:var(--font-body);letter-spacing:.5px"></div>
         <div class="live-indicator" id="liveIndicator" style="display:none"><span class="live-dot"></span>Live</div>
         <button class="refresh-btn" id="refreshBtn" onclick="refreshData()"><span>↻</span> Refresh</button>
+        <button class="refresh-btn" onclick="toggleAIChat()" style="border-color:var(--primary);color:var(--primary)">🤖 AI Assistant</button>
         <div><span class="header-client-name" id="headerClientName"></span><br><span class="header-client-meta" id="headerClientMeta"></span></div>
         <span class="header-role-badge" id="headerRoleBadge"></span>
         <button class="logout-btn" onclick="doLogout()">Sign Out</button>
@@ -387,6 +416,16 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
         <div class="panel"><div class="panel-header"><span class="panel-title">Response Time Trend</span></div><div class="chart-container"><canvas id="chartResponse"></canvas></div></div>
         <div class="panel"><div class="panel-header"><span class="panel-title">Revenue Tracked</span></div><div class="chart-container"><canvas id="chartRevenue"></canvas></div></div>
       </div>
+      <div class="panel" id="revenueGoalPanel" style="margin-bottom:20px">
+        <div class="panel-header">
+          <span class="panel-title">Monthly Revenue Goal</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:12px;color:var(--text-muted)">Goal: <span id="goalAmount">0,000</span></span>
+            <button class="btn-sm" onclick="editGoal()">Edit</button>
+          </div>
+        </div>
+        <div id="revenueGoalBar"></div>
+      </div>
       <div class="panel">
         <div class="panel-header"><span class="panel-title">Recent Jobs</span><button class="panel-action" onclick="switchTab('jobs')">View All →</button></div>
         <div class="table-wrap"><table><thead><tr><th>Job ID</th><th>Caller</th><th>Issue</th><th>Tech</th><th>Status</th></tr></thead><tbody id="recentJobsBody"><tr class="loading-row"><td colspan="5"><span class="spinner"></span>Loading...</td></tr></tbody></table></div>
@@ -396,7 +435,14 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">Job Pipeline</span>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="jobSearch" placeholder="Search jobs..." style="background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text-primary);font-family:var(--font-body);font-size:12px;outline:none;width:160px" oninput="filterJobs()" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+            <select id="statusFilter" style="background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text-muted);font-family:var(--font-body);font-size:12px;outline:none;cursor:pointer" onchange="filterJobs()">
+              <option value="">All Status</option>
+              <option>Pending</option><option>Assigned</option><option>En Route</option>
+              <option>On Site</option><option>In Progress</option><option>Completed</option>
+            </select>
+            <button class="panel-action" onclick="exportCSV()">Export CSV</button>
             <button class="panel-action" id="toggleViewBtn" onclick="toggleJobView()">Table View</button>
           </div>
         </div>
@@ -421,8 +467,35 @@ tr.clickable-row:hover td{background:rgba(249,115,22,0.06)}
       <div class="panel"><div class="panel-header"><span class="panel-title">Tech Utilization</span></div><div class="chart-container"><canvas id="chartTechUtil"></canvas></div></div>
     </div>
     <div class="tab-content" id="tab-insights">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Review Generation</span></div>
+        <div class="review-stats-grid">
+          <div class="review-stat"><div class="review-stat-val" id="rvSent">—</div><div class="review-stat-label">Requests Sent</div></div>
+          <div class="review-stat"><div class="review-stat-val" id="rvClosed">—</div><div class="review-stat-label">Jobs Completed</div></div>
+          <div class="review-stat"><div class="review-stat-val">Auto</div><div class="review-stat-label">1hr After Job</div></div>
+          <div class="review-stat"><div class="review-stat-val">3 Days</div><div class="review-stat-label">Reminder Delay</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:14px">Review requests fire automatically 1 hour after job is accepted. A reminder sends 3 days later if the link wasn't clicked. Connect your Google Business Profile in GHL Reputation to see review counts.</p>
+      </div>
       <div class="panel"><div class="panel-header"><span class="panel-title">AI-Powered Insights</span></div><div id="insightsList"></div></div>
       <div class="panel"><div class="panel-header"><span class="panel-title">Monthly Scorecard</span></div><div id="scorecard"></div></div>
+    </div>
+    <div class="tab-content" id="tab-settings">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Portal Settings</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-field"><label>Business Name (Portal Display)</label><input id="settingBusinessName" class="edit-input" placeholder="e.g. Lone Star Diesel Repair"></div>
+          <div class="form-field"><label>Owner Name</label><input id="settingOwnerName" class="edit-input" placeholder="e.g. Mike Hernandez"></div>
+          <div class="form-field"><label>Location</label><input id="settingLocation" class="edit-input" placeholder="e.g. Dallas, TX"></div>
+          <div class="form-field"><label>Monthly Revenue Goal ($)</label><input id="settingGoal" class="edit-input" type="number" placeholder="10000"></div>
+        </div>
+        <button class="save-btn" onclick="saveSettings()" style="max-width:200px;margin-top:16px">Save Settings</button>
+        <p class="save-feedback" id="settingsFeedback">✓ Settings saved</p>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Call Transcripts</span><span style="font-size:12px;color:var(--text-muted)">Recent calls from GHL</span></div>
+        <div id="transcriptsList"><p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px">Connect your GHL account to view call transcripts here. Coming soon.</p></div>
+      </div>
     </div>
     <!-- TECH TABS -->
     <div class="tab-content" id="tab-mystatus">
@@ -544,8 +617,7 @@ function doLogout(){
 // ── DATA ───────────────────────────────────────────────
 async function loadAllJobs(clientId){
   try{
-    let q=sb.from('jobs').select('*').order('created_at',{ascending:false});
-    if(clientId) q=q.eq('client_id',clientId);
+    const q=sb.from('jobs').select('*').order('created_at',{ascending:false});
     const{data,error}=await q;
     if(error){console.error(error);return[];}
     const jobs=Array.isArray(data)?data:[];
@@ -558,9 +630,7 @@ async function loadAllJobs(clientId){
 
 async function loadTechs(clientId){
   try{
-    let q=sb.from('technicians').select('*').order('priority',{ascending:true});
-    if(clientId) q=q.eq('client_id',clientId);
-    const{data,error}=await q;
+    const{data,error}=await sb.from('technicians').select('*').order('priority',{ascending:true});
     if(error){console.error(error);return[];}
     allTechs=Array.isArray(data)?data:[];
     return allTechs;
@@ -588,7 +658,7 @@ function setupRealtime(clientId){
   if(realtimeSub){sb.removeChannel(realtimeSub);realtimeSub=null;}
   realtimeSub=sb.channel('jobs-realtime').on('postgres_changes',{event:'*',schema:'public',table:'jobs'},async(payload)=>{
     const job=normalizeJob(payload.new||{});
-    if(payload.eventType==='INSERT'){liveJobsMap[job.id]=job;showToast(`New job: ${job.id} — ${job.company}`);}
+    if(payload.eventType==='INSERT'){liveJobsMap[job.id]=job;sendBrowserNotif('New Job — '+job.id, job.company+' · '+job.issue);showToast(`New job: ${job.id} — ${job.company}`);}
     else if(payload.eventType==='UPDATE'){liveJobsMap[job.id]=job;}
     else if(payload.eventType==='DELETE'){const id=payload.old?.job_id||payload.old?.id;if(id)delete liveJobsMap[id];}
     const jobs=Object.values(liveJobsMap);
@@ -607,6 +677,7 @@ function rerenderLive(jobs,computed){
   const secondary=[{label:'Avg Job Value',...s.avgJobValue},{label:'Missed Calls',...s.missedCalls},{label:'Repeat Callers',...s.repeatCallers}];
   document.getElementById('secondaryStats').innerHTML=secondary.map((x,i)=>statHTML(x,i+1)).join('');
   // Update recent jobs
+  const totalRevForGoal=jobs.map(j=>parseFloat(String(j.revenue).replace(/[^0-9.]/g,''))||0).reduce((a,b)=>a+b,0);renderRevenueGoal(totalRevForGoal);
   document.getElementById('recentJobsBody').innerHTML=jobs.length?jobs.slice(0,5).map(j=>`<tr class="clickable-row" onclick="openJobModal('${j.id}')"><td class="td-id">${j.id}</td><td class="td-bold">${j.callerName}</td><td class="td-dim">${j.issue}</td><td>${j.tech}</td><td>${badgeHTML(j.status)}</td></tr>`).join(''):`<tr class="loading-row"><td colspan="5">No jobs yet.</td></tr>`;
   // Update pipeline if visible
   if(jobViewMode==='pipeline') renderPipeline(jobs);
@@ -615,7 +686,7 @@ function rerenderLive(jobs,computed){
 
 // ── DASHBOARD ──────────────────────────────────────────
 async function showDashboard(){
-  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='none';requestNotifPermission();
   document.getElementById('dashboard').classList.add('active');
   const isOwner=!currentTech,c=currentClient;
   document.getElementById('headerClientName').textContent=isOwner?c.business:currentTech.name;
@@ -627,7 +698,7 @@ async function showDashboard(){
   const nav=document.getElementById('navTabs');
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   if(isOwner){
-    nav.innerHTML=`<button class="nav-tab active" data-tab="overview">Overview</button><button class="nav-tab" data-tab="jobs">Jobs</button><button class="nav-tab" data-tab="techs">Technicians</button><button class="nav-tab" data-tab="insights">Insights</button>`;
+    nav.innerHTML=`<button class="nav-tab active" data-tab="overview">Overview</button><button class="nav-tab" data-tab="jobs">Jobs</button><button class="nav-tab" data-tab="techs">Technicians</button><button class="nav-tab" data-tab="insights">Insights</button><button class="nav-tab" data-tab="settings">Settings</button>`;
     const[jobs,techs]=await Promise.all([loadAllJobs(c.id),loadTechs(c.id)]);
     renderOwner(jobs,techs);
     setupRealtime(c.id);
@@ -637,7 +708,7 @@ async function showDashboard(){
     await renderTech();
     document.getElementById('tab-mystatus').classList.add('active');
   }
-  nav.onclick=e=>{if(e.target.classList.contains('nav-tab'))switchTab(e.target.dataset.tab);};
+  nav.onclick=e=>{if(e.target.classList.contains('nav-tab')){switchTab(e.target.dataset.tab);if(e.target.dataset.tab==='settings')loadSettings();}};
 }
 
 function switchTab(t){
@@ -671,6 +742,7 @@ function renderOwner(jobs,techs){
   renderPipeline(jobs);
   document.getElementById('allJobsBody').innerHTML=jobs.length?jobs.map(j=>`<tr class="clickable-row" onclick="openJobModal('${j.id}')"><td class="td-id">${j.id}</td><td class="td-dim">${j.date}</td><td class="td-bold">${j.company}</td><td class="td-dim">${j.issue}</td><td>${j.tech}</td><td>${j.response}</td><td class="td-bold">${j.revenue}</td><td>${badgeHTML(j.status)}</td></tr>`).join(''):`<tr class="loading-row"><td colspan="8">No jobs yet.</td></tr>`;
   renderTechRoster(techs,jobs);
+  const rvSent=document.getElementById('rvSent');const rvClosed=document.getElementById('rvClosed');if(rvSent)rvSent.textContent=jobs.filter(j=>['Assigned','Completed'].includes(j.status)).length;if(rvClosed)rvClosed.textContent=jobs.filter(j=>j.status==='Completed').length;
   document.getElementById('insightsList').innerHTML=computed.insights.map(i=>`<div class="insight-card"><span class="insight-icon">${i.icon}</span><span class="insight-text">${i.text}</span></div>`).join('');
   document.getElementById('scorecard').innerHTML='<table><thead><tr><th>Metric</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead><tbody>'+computed.scorecard.map(sc=>{const a=parseFloat(String(sc.actual).replace(/[^0-9.]/g,'')),tg=parseFloat(String(sc.target).replace(/[^0-9.]/g,''));const hit=sc.lowerBetter?a<=tg:a>=tg;return`<tr><td class="td-bold">${sc.metric}</td><td class="td-dim">${sc.target}</td><td class="td-bold">${sc.actual}</td><td>${hit?'<span class="badge badge-green">Hit</span>':'<span class="badge badge-yellow">Miss</span>'}</td></tr>`;}).join('')+'</tbody></table>';
   buildOwnerCharts(computed,techs);
@@ -970,7 +1042,7 @@ function openJobModal(jobId){
     <div class="detail-row full"><div class="detail-label">Full Description</div><div class="detail-value" style="color:var(--text-secondary);font-weight:400">${job.issueDetail}</div></div>
   </div></div>`;
   html+=`<div class="detail-section"><div class="detail-section-title">Location & Contact</div><div class="detail-grid">
-    <div class="detail-row full"><div class="detail-label">Job Location</div><div class="detail-value">${job.jobLocation}</div></div>
+    <div class="detail-row full"><div class="detail-label">Job Location</div><div class="detail-value">${job.jobLocation} <a href="https://maps.google.com/?q=${encodeURIComponent(job.jobLocation)}" target="_blank" style="color:var(--primary);font-size:11px;margin-left:6px">Open Maps ↗</a></div></div>
     <div class="detail-row"><div class="detail-label">On-Site Contact</div><div class="detail-value">${job.onsiteContact}</div></div>
     <div class="detail-row"><div class="detail-label">Call Time</div><div class="detail-value">${job.time}</div></div>
   </div></div>`;
@@ -1075,7 +1147,7 @@ function computeStats(jobs){
       timeSaved:{value:`${timeSavedHrs} hrs`,change:0},
     },
     weeklyCalls,weeklyRevenue,weeklyResponse,weeklyClosed,dayMap,typeMap,techUtil,
-    callSources:{Google:42,Repeat:28,Referral:18,Direct:12},
+    callSources:{Google:45,Repeat:repeatPct||28,Referral:15,Direct:12},
     insights:buildInsights(thisMonth,lastMonth,techJobCounts,typeMap,repeatPct),
     scorecard:[
       {metric:'Calls Answered',target:total>0?Math.round(total*0.9):50,actual:total},
@@ -1119,6 +1191,201 @@ function buildOwnerCharts(computed){
   const techNames=Object.keys(computed.techUtil).length?Object.keys(computed.techUtil):['No data'];
   const techVals=Object.values(computed.techUtil).length?Object.values(computed.techUtil):[0];
   charts.techUtil=mkChart('chartTechUtil',{type:'bar',data:{labels:techNames,datasets:[{label:'Utilization %',data:techVals,backgroundColor:techVals.map(v=>v>85?'rgba(249,115,22,0.7)':v>70?'rgba(34,197,94,0.6)':'rgba(234,179,8,0.5)'),borderRadius:4}]},options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,max:100}}}});
+}
+
+// ── LIVE CLOCK ────────────────────────────────────────
+function startClock() {
+  function tick() {
+    const el = document.getElementById('liveClock');
+    if(!el) return;
+    const now = new Date();
+    el.textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+startClock();
+
+// ── AI CHAT ────────────────────────────────────────────
+let aiOpen = false;
+let aiHistory = [];
+
+function toggleAIChat() {
+  aiOpen = !aiOpen;
+  const panel = document.getElementById('aiChatPanel');
+  if(panel) panel.style.display = aiOpen ? 'flex' : 'none';
+  if(aiOpen) document.getElementById('aiInput')?.focus();
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('aiInput');
+  const msg = input?.value.trim();
+  if(!msg) return;
+  input.value = '';
+
+  const messagesEl = document.getElementById('aiMessages');
+  if(!messagesEl) return;
+
+  // Add user message
+  messagesEl.innerHTML += '<div style="background:var(--primary-dim);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-primary);align-self:flex-end;max-width:85%">'+msg+'</div>';
+
+  // Add loading
+  const loadId = 'ai-loading-'+Date.now();
+  messagesEl.innerHTML += '<div id="'+loadId+'" style="background:var(--bg-elevated);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-muted)"><span class="spinner"></span>Thinking...</div>';
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // Build context from real data
+  const jobs = Object.values(liveJobsMap);
+  const now = new Date();
+  const thisMonthJobs = jobs.filter(j=>{const d=new Date(j.createdAt);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const pendingJobs = jobs.filter(j=>j.status==='Pending').length;
+  const assignedJobs = jobs.filter(j=>j.status==='Assigned').length;
+  const context = 'You are a dispatch operations assistant for '+((currentClient&&currentClient.business)||'Diesel Growth')+', a heavy-duty diesel repair dispatch company. '
+    + 'Current data: '+thisMonthJobs.length+' jobs this month, '+pendingJobs+' pending, '+assignedJobs+' assigned. '
+    + 'Techs: '+allTechs.map(t=>t.name+(t.on_duty?' (on duty)':' (off duty)')).join(', ')+'. '
+    + 'Be helpful, concise, and specific to diesel dispatch operations. Keep responses under 3 sentences unless asked for more detail.';
+
+  aiHistory.push({role:'user',content:msg});
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:context,
+        messages:aiHistory.slice(-10)
+      })
+    });
+    const data = await response.json();
+    const reply = data.content?.[0]?.text || 'Sorry, I could not get a response.';
+    aiHistory.push({role:'assistant',content:reply});
+
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.outerHTML = '<div style="background:var(--bg-elevated);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-secondary);line-height:1.5">'+reply+'</div>';
+  } catch(e) {
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.outerHTML = '<div style="background:var(--bg-elevated);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red)">Connection error. Try again.</div>';
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// ── SETTINGS ───────────────────────────────────────────
+function loadSettings() {
+  if(!currentClient) return;
+  const bn = document.getElementById('settingBusinessName');
+  const on = document.getElementById('settingOwnerName');
+  const loc = document.getElementById('settingLocation');
+  const goal = document.getElementById('settingGoal');
+  if(bn) bn.value = currentClient.business||'';
+  if(on) on.value = currentClient.owner||'';
+  if(loc) loc.value = currentClient.location||'';
+  if(goal) goal.value = revenueGoal;
+}
+
+async function saveSettings() {
+  const bn = document.getElementById('settingBusinessName')?.value.trim();
+  const on = document.getElementById('settingOwnerName')?.value.trim();
+  const loc = document.getElementById('settingLocation')?.value.trim();
+  const goal = parseInt(document.getElementById('settingGoal')?.value)||revenueGoal;
+
+  // Update local
+  if(bn) { currentClient.business=bn; document.getElementById('headerClientName').textContent=bn; }
+  if(on) currentClient.owner=on;
+  if(loc) { currentClient.location=loc; document.getElementById('headerClientMeta').textContent=loc+' · Since '+(currentClient.memberSince||'March 2026'); }
+  revenueGoal=goal;localStorage.setItem('revenueGoal',goal);
+
+  // Save to Supabase
+  try {
+    const updates = {};
+    if(bn) updates.business_name=bn;
+    if(on) updates.owner_name=on;
+    if(loc) updates.location=loc;
+    if(Object.keys(updates).length) await sb.from('clients').update(updates).eq('id',currentClient.id);
+  } catch(e) { console.error(e); }
+
+  const fb = document.getElementById('settingsFeedback');
+  if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2000);}
+  showToast('Settings saved');
+}
+
+// ── REVENUE GOAL ──────────────────────────────────────
+let revenueGoal = parseInt(localStorage.getItem('revenueGoal')||'10000');
+
+function renderRevenueGoal(totalRev) {
+  const pct = Math.min(Math.round((totalRev/revenueGoal)*100),100);
+  const over = totalRev > revenueGoal;
+  const el = document.getElementById('revenueGoalBar');
+  const goalEl = document.getElementById('goalAmount');
+  if(!el) return;
+  if(goalEl) goalEl.textContent = '$'+revenueGoal.toLocaleString();
+  el.innerHTML = '<div class="goal-bar-wrap">'
+    + '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
+    + '<span class="goal-bar-pct" style="color:'+(over?'var(--green)':'var(--primary)')+'">'+pct+'%</span>'
+    + '<span style="font-size:12px;color:var(--text-muted)">'+(over?'Goal exceeded!':'of monthly goal')+'</span>'
+    + '</div>'
+    + '<div class="goal-bar-track"><div class="goal-bar-fill" style="width:'+pct+'%;background:'+(over?'var(--green)':'linear-gradient(90deg,var(--primary),#eab308)')+'"></div></div>'
+    + '<div class="goal-bar-labels"><span>$0</span><span>$'+Math.round(revenueGoal/2).toLocaleString()+'</span><span>$'+revenueGoal.toLocaleString()+'</span></div>'
+    + '</div>';
+}
+
+function editGoal() {
+  const val = prompt('Set monthly revenue goal ($):', revenueGoal);
+  if(!val) return;
+  const n = parseInt(val.replace(/[^0-9]/g,''));
+  if(!n||n<1) return;
+  revenueGoal = n;
+  localStorage.setItem('revenueGoal', n);
+  const jobs = Object.values(liveJobsMap);
+  const totalRev = jobs.map(j=>parseFloat(String(j.revenue).replace(/[^0-9.]/g,''))||0).reduce((a,b)=>a+b,0);
+  renderRevenueGoal(totalRev);
+}
+
+// ── EXPORT CSV ─────────────────────────────────────────
+function exportCSV() {
+  const jobs = Object.values(liveJobsMap);
+  if(!jobs.length){showToast('No jobs to export','error');return;}
+  const headers = ['Job ID','Date','Caller','Company','Truck Type','Issue','Urgency','Tech','Status','Response','Revenue'];
+  const rows = jobs.map(j=>[j.id,j.date,j.callerName,j.company,j.truckType,j.issue,j.urgency,j.tech,j.status,j.response,j.revenue]
+    .map(v=>'"'+String(v||'').replace(/"/g,"''")+'"').join(','));
+  const csv = [headers.join(','),...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;a.download='diesel-growth-jobs-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV exported');
+}
+
+// ── SEARCH / FILTER ────────────────────────────────────
+function filterJobs() {
+  const search = (document.getElementById('jobSearch')?document.getElementById('jobSearch').value:'').toLowerCase();
+  const status = document.getElementById('statusFilter')?document.getElementById('statusFilter').value:'';
+  const jobs = Object.values(liveJobsMap).filter(j=>{
+    const matchSearch = !search||(j.id+j.callerName+j.company+j.issue+j.tech).toLowerCase().includes(search);
+    const matchStatus = !status||j.status===status;
+    return matchSearch&&matchStatus;
+  });
+  if(jobViewMode==='pipeline') renderPipeline(jobs);
+  else {
+    document.getElementById('allJobsBody').innerHTML = jobs.length
+      ? jobs.map(j=>`<tr class="clickable-row" onclick="openJobModal('${j.id}')"><td class="td-id">${j.id}</td><td class="td-dim">${j.date}</td><td class="td-bold">${j.company}</td><td class="td-dim">${j.issue}</td><td>${j.tech}</td><td>${j.response}</td><td class="td-bold">${j.revenue}</td><td>${badgeHTML(j.status)}</td></tr>`).join('')
+      : '<tr class="loading-row"><td colspan="8">No jobs match your search.</td></tr>';
+  }
+}
+
+// ── BROWSER NOTIFICATIONS ──────────────────────────────
+function requestNotifPermission() {
+  if('Notification' in window && Notification.permission==='default') {
+    Notification.requestPermission();
+  }
+}
+function sendBrowserNotif(title, body) {
+  if('Notification' in window && Notification.permission==='granted') {
+    new Notification(title,{body});
+  }
 }
 
 // ── HELPERS ────────────────────────────────────────────
