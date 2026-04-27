@@ -1047,13 +1047,14 @@ function renderScorecard(jobs) {
 
 function categorizeIssue(issue) {
   const i = (issue || '').toLowerCase();
-  if (i.includes('def') || i.includes('scr')) return 'DEF System';
-  if (i.includes('engine') || i.includes('overh')) return 'Engine';
-  if (i.includes('electr')) return 'Electrical';
-  if (i.includes('brake') || i.includes('air')) return 'Brake/Air';
-  if (i.includes('dpf') || i.includes('egr') || i.includes('regen')) return 'Aftertreatment';
-  if (i.includes('cool') || i.includes('temp')) return 'Cooling';
-  if (i.includes('turbo') || i.includes('boost')) return 'Turbo/Fuel';
+  if (i.includes('def') || i.includes('scr') || i.includes('adblue')) return 'DEF/SCR';
+  if (i.includes('engine') || i.includes('overh') || i.includes('overheat') || i.includes('check engine') || i.includes('misfire') || i.includes('injector') || i.includes('fuel')) return 'Engine/Fuel';
+  if (i.includes('electr') || i.includes('wiring') || i.includes('battery') || i.includes('sensor') || i.includes('abs') || i.includes('light') || i.includes('fault') || i.includes('warning')) return 'Electrical';
+  if (i.includes('brake') || i.includes('air') || i.includes('suspension') || i.includes('steering') || i.includes('wheel') || i.includes('tire')) return 'Brake/Suspension';
+  if (i.includes('dpf') || i.includes('egr') || i.includes('regen') || i.includes('exhaust') || i.includes('emission') || i.includes('clog')) return 'Aftertreatment';
+  if (i.includes('cool') || i.includes('temp') || i.includes('radiator') || i.includes('leak') || i.includes('water') || i.includes('heat')) return 'Cooling/Leak';
+  if (i.includes('turbo') || i.includes('boost') || i.includes('power loss') || i.includes('smoke') || i.includes('noise') || i.includes('vibrat')) return 'Turbo/Power';
+  if (i.includes('transmission') || i.includes('clutch') || i.includes('gear') || i.includes('differential')) return 'Drivetrain';
   return 'Other';
 }
 
