@@ -1437,10 +1437,10 @@ function buildOwnerCharts(jobs, techs) {
   const techJobCounts = techs.map(t => m.filter(j => j.tech?.toLowerCase().includes(t.name?.toLowerCase().split(' ')[0])).length);
   const techRevs = techs.map(t => m.filter(j => j.tech?.toLowerCase().includes(t.name?.toLowerCase().split(' ')[0])).map(j=>parseRev(j.revenue)).reduce((a,b)=>a+b,0));
   const techResps = techs.map(t => { const rt = m.filter(j=>j.tech?.toLowerCase().includes(t.name?.toLowerCase().split(' ')[0])).map(j=>parseMin(j.response)).filter(n=>n!==null); return rt.length?(rt.reduce((a,b)=>a+b,0)/rt.length).toFixed(1):0; });
-  charts.tjobs = mk('cTechJobs', { type:'bar', data:{ labels:techNames, datasets:[{data:techJobCounts,backgroundColor:TECH_COLORS.map(c=>c+'bb'),borderRadius:4}]}, options:cDef});
-  charts.trev = mk('cTechRev', { type:'bar', data:{ labels:techNames, datasets:[{data:techRevs,backgroundColor:'rgba(34,197,94,0.6)',borderRadius:4}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{...cDef.scales.y.ticks,callback:v=>'$'+v.toLocaleString()}}}}});
-  charts.tresp = mk('cTechResp', { type:'bar', data:{ labels:techNames, datasets:[{data:techResps,backgroundColor:'rgba(249,115,22,0.5)',borderRadius:4}]}, options:cDef});
-  charts.tacc = mk('cTechAcc', { type:'bar', data:{ labels:techNames, datasets:[{data:techNames.map(()=>Math.round(85+Math.random()*12)),backgroundColor:TECH_COLORS.map(c=>c+'99'),borderRadius:4}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,max:100}}}});
+  charts.tjobs = mk('cTechJobs', { type:'bar', data:{ labels:techNames, datasets:[{data:techJobCounts,backgroundColor:TECH_COLORS.map(c=>c+'bb'),borderRadius:6,maxBarThickness:48}]}, options:{...cDef,plugins:{...cDef.plugins,legend:{display:false}}}});
+  charts.trev = mk('cTechRev', { type:'bar', data:{ labels:techNames, datasets:[{data:techRevs,backgroundColor:'rgba(34,197,94,0.6)',borderRadius:6,maxBarThickness:48}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{...cDef.scales.y.ticks,callback:v=>'$'+v.toLocaleString()}}}}});
+  charts.tresp = mk('cTechResp', { type:'bar', data:{ labels:techNames, datasets:[{data:techResps,backgroundColor:'rgba(249,115,22,0.5)',borderRadius:6,maxBarThickness:48}]}, options:cDef});
+  charts.tacc = mk('cTechAcc', { type:'bar', data:{ labels:techNames, datasets:[{data:techNames.map(()=>Math.round(85+Math.random()*12)),backgroundColor:TECH_COLORS.map(c=>c+'99'),borderRadius:6,maxBarThickness:48}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,max:100}}}});
 
   // ── YEARLY PERFORMANCE TRACKER ────────────────────────
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
