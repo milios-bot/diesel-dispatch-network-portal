@@ -351,30 +351,14 @@ tr.cr:hover td{background:rgba(249,115,22,0.06)}
           <span class="pt">Yearly Performance Tracker</span>
           <span style="font-size:11px;color:var(--text-muted)" id="yearLabel"></span>
         </div>
-        <div class="g2" style="margin-bottom:0">
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Jobs Per Month</div>
-            <div style="position:relative;width:100%;height:180px"><canvas id="cYearJobs"></canvas></div>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Revenue Per Month</div>
-            <div style="position:relative;width:100%;height:180px"><canvas id="cYearRev"></canvas></div>
-          </div>
-        </div>
-      </div>
-      <div class="panel" style="margin-bottom:20px">
-        <div class="ph">
-          <span class="pt">Yearly Performance Tracker</span>
-          <span style="font-size:11px;color:var(--text-muted)" id="yearLabel"></span>
-        </div>
         <div class="g2">
           <div>
             <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Jobs Per Month</div>
-            <div style="position:relative;width:100%;height:180px"><canvas id="cYearJobs"></canvas></div>
+            <div style="position:relative;width:100%;height:200px"><canvas id="cYearJobs"></canvas></div>
           </div>
           <div>
             <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Revenue Per Month</div>
-            <div style="position:relative;width:100%;height:180px"><canvas id="cYearRev"></canvas></div>
+            <div style="position:relative;width:100%;height:200px"><canvas id="cYearRev"></canvas></div>
           </div>
         </div>
       </div>
@@ -441,6 +425,22 @@ tr.cr:hover td{background:rgba(249,115,22,0.06)}
       </div>
       <div class="panel"><div class="ph"><span class="pt">AI-Powered Insights</span></div><div id="insightsList"></div></div>
       <div class="panel"><div class="ph"><span class="pt">Monthly Scorecard</span></div><div id="scorecard"></div></div>
+      <div class="panel" style="margin-top:20px">
+        <div class="ph">
+          <span class="pt">Yearly Performance Tracker</span>
+          <span style="font-size:11px;color:var(--text-muted)" id="yearLabelInsights"></span>
+        </div>
+        <div class="g2">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Jobs Per Month</div>
+            <div style="position:relative;width:100%;height:200px"><canvas id="cYearJobs2"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Revenue Per Month</div>
+            <div style="position:relative;width:100%;height:200px"><canvas id="cYearRev2"></canvas></div>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- SETTINGS -->
     <div class="tab-content" id="tab-settings">
@@ -1441,6 +1441,36 @@ function buildOwnerCharts(jobs, techs) {
   charts.trev = mk('cTechRev', { type:'bar', data:{ labels:techNames, datasets:[{data:techRevs,backgroundColor:'rgba(34,197,94,0.6)',borderRadius:4}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{...cDef.scales.y.ticks,callback:v=>'$'+v.toLocaleString()}}}}});
   charts.tresp = mk('cTechResp', { type:'bar', data:{ labels:techNames, datasets:[{data:techResps,backgroundColor:'rgba(249,115,22,0.5)',borderRadius:4}]}, options:cDef});
   charts.tacc = mk('cTechAcc', { type:'bar', data:{ labels:techNames, datasets:[{data:techNames.map(()=>Math.round(85+Math.random()*12)),backgroundColor:TECH_COLORS.map(c=>c+'99'),borderRadius:4}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,max:100}}}});
+
+  // ── YEARLY PERFORMANCE TRACKER ────────────────────────
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const curYear = new Date().getFullYear();
+  const curMo = new Date().getMonth();
+  const moLabels = MONTHS.slice(0, curMo + 1);
+  const monthlyJobCounts = Array(12).fill(0);
+  const monthlyRevTotals = Array(12).fill(0);
+  jobs.forEach(j => {
+    const d = new Date(j.createdAt);
+    if (d.getFullYear() === curYear) {
+      monthlyJobCounts[d.getMonth()]++;
+      monthlyRevTotals[d.getMonth()] += parseRev(j.revenue);
+    }
+  });
+  const moJobs = monthlyJobCounts.slice(0, curMo + 1);
+  const moRev = monthlyRevTotals.slice(0, curMo + 1);
+  const ylbl = document.getElementById('yearLabel');
+  const ylbl2 = document.getElementById('yearLabelInsights');
+  if (ylbl) ylbl.textContent = curYear + ' · Year to Date';
+  if (ylbl2) ylbl2.textContent = curYear + ' · Year to Date';
+  const yOpts1 = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>v.raw+' jobs'}}},scales:{x:{grid:{color:'#1e1e1e'},ticks:{color:'#555',font:{family:'Barlow Condensed',size:11}}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#555',font:{family:'Barlow Condensed',size:11},stepSize:1},min:0}}};
+  const yOpts2 = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>'$'+v.raw.toLocaleString()}}},scales:{x:{grid:{color:'#1e1e1e'},ticks:{color:'#555',font:{family:'Barlow Condensed',size:11}}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#555',font:{family:'Barlow Condensed',size:11},callback:v=>'$'+v.toLocaleString()}}}};
+  const jobColors = moJobs.map((_,i)=>i===curMo?'rgba(249,115,22,0.95)':'rgba(249,115,22,0.35)');
+  const revColors = moRev.map((_,i)=>i===curMo?'rgba(34,197,94,0.95)':'rgba(34,197,94,0.35)');
+  ['yearJobs','yearRev','yearJobs2','yearRev2'].forEach(k=>{if(charts[k]){charts[k].destroy();delete charts[k];}});
+  const c1=document.getElementById('cYearJobs'); if(c1) charts.yearJobs=new Chart(c1,{type:'bar',data:{labels:moLabels,datasets:[{data:moJobs,backgroundColor:jobColors,borderRadius:4}]},options:yOpts1});
+  const c2=document.getElementById('cYearRev'); if(c2) charts.yearRev=new Chart(c2,{type:'bar',data:{labels:moLabels,datasets:[{data:moRev,backgroundColor:revColors,borderRadius:4}]},options:yOpts2});
+  const c3=document.getElementById('cYearJobs2'); if(c3) charts.yearJobs2=new Chart(c3,{type:'bar',data:{labels:moLabels,datasets:[{data:moJobs,backgroundColor:jobColors,borderRadius:4}]},options:yOpts1});
+  const c4=document.getElementById('cYearRev2'); if(c4) charts.yearRev2=new Chart(c4,{type:'bar',data:{labels:moLabels,datasets:[{data:moRev,backgroundColor:revColors,borderRadius:4}]},options:yOpts2});
 }
 
 // ── AI ASSISTANT ──────────────────────────────────────
