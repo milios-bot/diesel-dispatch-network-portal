@@ -1030,8 +1030,7 @@ async function renderTranscripts() {
           const parsed = typeof c.transcript === 'string' ? JSON.parse(c.transcript) : c.transcript;
           if (Array.isArray(parsed)) messages = parsed;
           else {
-            // GHL sends transcript as plain text with "AI: ... 
-Caller: ..." format
+            // GHL sends transcript as plain text with AI:/Caller: format
             const lines = c.transcript.split(/\n|\r\n/).filter(l => l.trim());
             messages = lines.map(l => {
               if (l.toLowerCase().startsWith('ai:') || l.toLowerCase().startsWith('agent:') || l.toLowerCase().startsWith('daniel:')) {
