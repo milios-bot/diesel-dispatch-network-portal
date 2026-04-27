@@ -379,7 +379,7 @@ tr.cr:hover td{background:rgba(249,115,22,0.06)}
     <div class="tab-content" id="tab-techs">
       <div class="sg" style="margin-bottom:20px">
         <div class="sc s1"><div class="sc-lbl">Active Techs</div><div class="sc-val" id="activeTechCount">—</div><div class="sc-chg up">On Duty Now</div></div>
-        <div class="sc s2"><div class="sc-lbl">Avg Accept Rate</div><div class="sc-val" id="avgAcceptRate">—</div></div>
+        <div class="sc s2"><div class="sc-lbl">Avg Accept Rate</div><div class="sc-val" id="avgAcceptRate">—</div><div class="sc-chg up" id="avgAcceptSub">Live data</div></div>
         <div class="sc s3"><div class="sc-lbl">Total Jobs</div><div class="sc-val" id="totalTechJobs">—</div></div>
       </div>
       <div class="panel">
@@ -419,6 +419,7 @@ tr.cr:hover td{background:rgba(249,115,22,0.06)}
           <div class="ff"><label>Owner Name</label><input id="s-owner" class="edit-input" placeholder="e.g. Mike Hernandez"></div>
           <div class="ff"><label>Location</label><input id="s-loc" class="edit-input" placeholder="e.g. Dallas, TX"></div>
           <div class="ff"><label>Monthly Revenue Goal ($)</label><input id="s-goal" class="edit-input" type="number" placeholder="10000"></div>
+          <div class="ff"><label>Monthly Call Target</label><input id="s-calls" class="edit-input" type="number" placeholder="50"></div>
         </div>
         <button class="sbtn" onclick="saveSettings()">Save Settings</button>
         <span id="settingsSaved" style="display:none;margin-left:12px;font-size:13px;color:var(--green)">✓ Saved</span>
@@ -794,6 +795,13 @@ function renderTechRoster(techs, jobs) {
   const onCount = techs.filter(t => t.on_duty).length;
   document.getElementById('activeTechCount').textContent = onCount + '/' + techs.length;
   document.getElementById('totalTechJobs').textContent = monthJobs.length;
+  // Calculate real accept rate: jobs that got assigned vs total jobs
+  const acceptedJobs = monthJobs.filter(j => j.status !== 'Pending' && j.tech && j.tech !== '—' && j.tech !== 'Unassigned').length;
+  const realAcceptRate = monthJobs.length ? Math.round((acceptedJobs / monthJobs.length) * 100) : 0;
+  const acceptEl = document.getElementById('avgAcceptRate');
+  const acceptSub = document.getElementById('avgAcceptSub');
+  if (acceptEl) acceptEl.textContent = realAcceptRate + '%';
+  if (acceptSub) { acceptSub.textContent = acceptedJobs + ' of ' + monthJobs.length + ' jobs accepted'; acceptSub.style.fontSize = '11px'; acceptSub.style.color = 'var(--text-dim)'; }
 
   const maxJobs = Math.max(...techs.map(t => monthJobs.filter(j => j.tech?.toLowerCase().includes(t.name?.toLowerCase().split(' ')[0])).length), 1);
 
@@ -985,12 +993,16 @@ function renderScorecard(jobs) {
   const rt = m.map(j => parseMin(j.response)).filter(n => n !== null);
   const avgResp = rt.length ? (rt.reduce((a, b) => a + b, 0) / rt.length).toFixed(1) : 0;
   const closeRate = total ? Math.round((closed / total) * 100) : 0;
+  // Targets: revenue from settings, others auto-calculated from goals
+  const callTarget = parseInt(localStorage.getItem('dg_call_target') || '50');
+  const jobTarget = Math.round(callTarget * 0.6);
+  const revTarget = revenueGoal;
   const rows = [
-    { metric: 'Calls Answered', target: 50, actual: total, check: total >= 50 },
-    { metric: 'Jobs Closed', target: 30, actual: closed, check: closed >= 30 },
+    { metric: 'Calls Answered', target: callTarget, actual: total, check: total >= callTarget },
+    { metric: 'Jobs Closed', target: jobTarget, actual: closed, check: closed >= jobTarget },
     { metric: 'Avg Response', target: '5 min', actual: avgResp + ' min', check: parseFloat(avgResp) <= 5 },
     { metric: 'Close Rate', target: '60%', actual: closeRate + '%', check: closeRate >= 60 },
-    { metric: 'Revenue', target: '$' + (revenueGoal / 2).toLocaleString(), actual: '$' + totalRev.toLocaleString(), check: totalRev >= revenueGoal / 2 },
+    { metric: 'Revenue', target: '$' + revTarget.toLocaleString(), actual: '$' + totalRev.toLocaleString(), check: totalRev >= revTarget },
     { metric: 'Missed Calls', target: '≤5', actual: missed, check: missed <= 5 },
   ];
   document.getElementById('scorecard').innerHTML = '<table><thead><tr><th>Metric</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead><tbody>' + rows.map(r => `<tr><td style="font-weight:600;color:var(--text-primary)">${r.metric}</td><td style="color:var(--text-muted)">${r.target}</td><td style="font-weight:600;color:var(--text-primary)">${r.actual}</td><td><span class="badge ${r.check ? 'bg' : 'by'}">${r.check ? 'Hit' : 'Miss'}</span></td></tr>`).join('') + '</tbody></table>';
@@ -1090,7 +1102,7 @@ function toggleTc(ci) {
 // ── SETTINGS ───────────────────────────────────────────
 function loadSettingsForm() {
   if (!currentClient) return;
-  const fields = { 's-biz': currentClient.business || '', 's-owner': currentClient.owner || '', 's-loc': currentClient.location || '', 's-goal': revenueGoal };
+  const fields = { 's-biz': currentClient.business || '', 's-owner': currentClient.owner || '', 's-loc': currentClient.location || '', 's-goal': revenueGoal, 's-calls': parseInt(localStorage.getItem('dg_call_target') || '50') };
   Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
   renderTranscripts();
 }
@@ -1104,6 +1116,8 @@ async function saveSettings() {
   if (owner) currentClient.owner = owner;
   if (loc) { currentClient.location = loc; document.getElementById('headerClientMeta').textContent = loc + ' · Since ' + (currentClient.memberSince || 'March 2026'); }
   revenueGoal = goal; localStorage.setItem('dg_revenue_goal', goal);
+  const callTarget = parseInt(document.getElementById('s-calls')?.value) || 50;
+  localStorage.setItem('dg_call_target', callTarget);
   try {
     const upd = {};
     if (biz) upd.business_name = biz;
@@ -1373,7 +1387,9 @@ function buildOwnerCharts(jobs, techs) {
   const repeatPct = callers.length ? Math.round(((callers.length-new Set(callers).size)/callers.length)*100) : 28;
   const mk = (id, cfg) => { const ctx = document.getElementById(id); if (ctx) return new Chart(ctx, cfg); };
   charts.calls = mk('cCalls', { type:'bar', data:{ labels:wk, datasets:[{label:'Calls',data:wCalls,backgroundColor:'rgba(249,115,22,0.7)',borderRadius:4},{label:'Closed',data:wClosed,backgroundColor:'rgba(34,197,94,0.6)',borderRadius:4}]}, options:{...cDef,plugins:{legend:{display:true,labels:{color:'#888',font:{family:'Barlow Condensed',size:11},boxWidth:10}}}}});
-  charts.sources = mk('cSources', { type:'doughnut', data:{ labels:['Google','Repeat','Referral','Direct'], datasets:[{data:[45,repeatPct,15,10],backgroundColor:['#F97316','#FB923C','#FDBA74','#FED7AA'],borderWidth:0}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#888',font:{family:'Barlow Condensed',size:11},boxWidth:10,padding:10}}}}});
+  // Lead sources: use real repeat caller data, show as Repeat vs New
+  const newCallers = 100 - repeatPct;
+  charts.sources = mk('cSources', { type:'doughnut', data:{ labels:['New Callers', 'Repeat Customers'], datasets:[{data:[newCallers, repeatPct],backgroundColor:['#F97316','#22c55e'],borderWidth:0}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#888',font:{family:'Barlow Condensed',size:11},boxWidth:10,padding:10}}}}});
   charts.resp = mk('cResp', { type:'line', data:{ labels:wk, datasets:[{data:wResp,borderColor:'#F97316',backgroundColor:'rgba(249,115,22,0.08)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#F97316'}]}, options:cDef});
   charts.rev = mk('cRev', { type:'bar', data:{ labels:wk, datasets:[{data:wRev,backgroundColor:'rgba(34,197,94,0.6)',borderRadius:4}]}, options:{...cDef,scales:{...cDef.scales,y:{...cDef.scales.y,ticks:{...cDef.scales.y.ticks,callback:v=>'$'+v.toLocaleString()}}}}});
   const filteredTypes = Object.entries(typeMap).filter(([,v])=>v>0);
