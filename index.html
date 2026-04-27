@@ -63,7 +63,7 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-
 .sc-lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:8px;font-weight:600}
 .sc-val{font-family:var(--font-heading);font-size:36px;font-weight:600;line-height:1;margin-bottom:8px}
 .sc-chg{font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px}
-.up{color:var(--primary)}.dn{color:var(--green)}
+.up{color:var(--green)}.dn{color:var(--green)}
 /* PANEL */
 .panel{background:linear-gradient(145deg,var(--bg-elevated),var(--bg-card));border:1px solid var(--border-light);border-radius:var(--radius);padding:24px;margin-bottom:20px}
 .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
@@ -345,6 +345,38 @@ tr.cr:hover td{background:rgba(249,115,22,0.06)}
       <div class="g2" style="margin-bottom:20px">
         <div class="panel"><div class="ph"><span class="pt">Response Time Trend</span></div><div class="cc"><canvas id="cResp"></canvas></div></div>
         <div class="panel"><div class="ph"><span class="pt">Revenue Tracked</span></div><div class="cc"><canvas id="cRev"></canvas></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:20px">
+        <div class="ph">
+          <span class="pt">Yearly Performance Tracker</span>
+          <span style="font-size:11px;color:var(--text-muted)" id="yearLabel"></span>
+        </div>
+        <div class="g2" style="margin-bottom:0">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Jobs Per Month</div>
+            <div style="position:relative;width:100%;height:180px"><canvas id="cYearJobs"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Revenue Per Month</div>
+            <div style="position:relative;width:100%;height:180px"><canvas id="cYearRev"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:20px">
+        <div class="ph">
+          <span class="pt">Yearly Performance Tracker</span>
+          <span style="font-size:11px;color:var(--text-muted)" id="yearLabel"></span>
+        </div>
+        <div class="g2">
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Jobs Per Month</div>
+            <div style="position:relative;width:100%;height:180px"><canvas id="cYearJobs"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:600;margin-bottom:10px">Revenue Per Month</div>
+            <div style="position:relative;width:100%;height:180px"><canvas id="cYearRev"></canvas></div>
+          </div>
+        </div>
       </div>
       <div class="panel">
         <div class="ph"><span class="pt">Recent Jobs</span><button class="pa" onclick="switchTab('jobs')">View All →</button></div>
@@ -699,11 +731,16 @@ function rerenderStats(jobs) {
     { label: 'Close Rate', val: closeRate + '%', color: 'var(--primary)', chg: '▲ 8%' },
   ];
   document.getElementById('primaryStats').innerHTML = primary.map((s, i) => `<div class="sc s${i + 1}"><div class="sc-glow" style="background:linear-gradient(135deg,rgba(249,115,22,0.12),transparent)"></div><div class="sc-lbl">${s.label}</div><div class="sc-val">${s.val}</div><div class="sc-chg up">${s.chg} <span style="color:var(--text-dim);font-weight:400">vs last month</span></div></div>`).join('');
+  const activeNow = jobs.filter(j => ['En Route','On Site','In Progress'].includes(j.status)).length;
+  const pendingNow = jobs.filter(j => j.status === 'Pending').length;
+  const completedMonth = thisMonth.filter(j => j.status === 'Completed').length;
   document.getElementById('secondaryStats').innerHTML = [
-    { label: 'Avg Job Value', val: avgRev > 0 ? '$' + avgRev : '—' },
-    { label: 'Missed Calls', val: missed },
-    { label: 'Repeat Callers', val: repeatPct + '%' },
-  ].map((s, i) => `<div class="sc s${i + 1}"><div class="sc-lbl">${s.label}</div><div class="sc-val">${s.val}</div></div>`).join('');
+    { label: 'Avg Job Value', val: avgRev > 0 ? '$' + avgRev : '—', sub: 'Per job' },
+    { label: 'Active Right Now', val: activeNow, sub: 'En Route / On Site / In Progress', color: activeNow > 0 ? 'var(--green)' : 'var(--text-primary)' },
+    { label: 'Jobs Pending', val: pendingNow, sub: 'Awaiting dispatch', color: pendingNow > 0 ? 'var(--yellow)' : 'var(--text-primary)' },
+    { label: 'Completed', val: completedMonth, sub: 'This month', color: 'var(--green)' },
+    { label: 'Repeat Callers', val: repeatPct + '%', sub: 'Return customers' },
+  ].map((s, i) => `<div class="sc s${i + 1}"><div class="sc-lbl">${s.label}</div><div class="sc-val" style="color:${s.color||'var(--text-primary)'}">${s.val}</div><div style="font-size:11px;color:var(--text-dim);margin-top:3px">${s.sub||''}</div></div>`).join('');
 
   renderRevenueGoal(totalRev);
   document.getElementById('recentTb').innerHTML = jobs.slice(0, 6).map(j => `<tr class="cr" onclick="openJobModal('${j.id}')"><td style="color:var(--primary);font-weight:600">${j.id}</td><td style="font-weight:500;color:var(--text-primary)">${j.callerName}</td><td style="color:var(--text-muted)">${j.issue}</td><td>${j.tech}</td><td>${bk(j.status)}</td></tr>`).join('');
@@ -1425,6 +1462,12 @@ async function sendAI() {
   const reply = smartAIResponse(msg);
   setTimeout(() => {
     msgs.innerHTML += `<div style="display:flex;gap:7px;align-items:flex-start"><div class="av" style="background:var(--primary-dim);border:1px solid var(--primary);color:var(--primary)">AI</div><div class="msg-ai">${reply}</div></div>`;
+    msgs.innerHTML += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px">'
+      + '<button onclick="askAI(\'How many jobs are pending right now?\')" style="background:var(--primary-dim);border:1px solid rgba(249,115,22,0.3);color:var(--primary);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:var(--font-body);font-size:11px;font-weight:600">Pending jobs?</button>'
+      + '<button onclick="askAI(\'Who is my top performing tech this month?\')" style="background:var(--primary-dim);border:1px solid rgba(249,115,22,0.3);color:var(--primary);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:var(--font-body);font-size:11px;font-weight:600">Top tech?</button>'
+      + '<button onclick="askAI(\'What is my revenue this month?\')" style="background:var(--primary-dim);border:1px solid rgba(249,115,22,0.3);color:var(--primary);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:var(--font-body);font-size:11px;font-weight:600">Revenue?</button>'
+      + '<button onclick="askAI(\'What jobs are active right now?\')" style="background:var(--primary-dim);border:1px solid rgba(249,115,22,0.3);color:var(--primary);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:var(--font-body);font-size:11px;font-weight:600">Active jobs?</button>'
+      + '</div>';
     msgs.scrollTop = msgs.scrollHeight;
   }, 350);
   msgs.scrollTop = msgs.scrollHeight;
